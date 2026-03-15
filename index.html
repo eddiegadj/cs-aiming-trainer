@@ -60,9 +60,9 @@
                   <button type="button" class="target-size-tab" role="tab" data-value="44" aria-selected="false">L</button>
                 </div>
               </label>
-              <label>
-                <span>Duration (sec)</span>
-                <input type="number" id="duration" value="60" min="5" max="180" />
+              <label class="duration-label">
+                <span>Duration <span id="durationValue">30s</span></span>
+                <input type="range" id="duration" min="10" max="115" step="5" value="30" />
               </label>
               <label class="sensitivity-label">
                 <span>Sensitivity <span id="sensitivityValue">1.3</span></span>

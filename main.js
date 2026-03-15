@@ -22,6 +22,7 @@ import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.m
   const mapSelect = document.getElementById("mapSelect");
   const targetSizeSelect = document.getElementById("targetSize");
   const durationInput = document.getElementById("duration");
+  const durationValueEl = document.getElementById("durationValue");
   const sensitivityInput = document.getElementById("sensitivity");
   const sensitivityValueEl = document.getElementById("sensitivityValue");
 
@@ -405,7 +406,7 @@ import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.m
   }
 
   function startRound() {
-    const durationSec = Math.max(5, Number(durationInput.value) || 60);
+    const durationSec = Math.max(10, Math.min(115, Number(durationInput.value) || 30));
     state.playing = true;
     state.targets = [];
     state.yaw = 0;
@@ -540,6 +541,19 @@ import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.m
   sensitivityInput.addEventListener("input", () => {
     sensitivityValueEl.textContent = Number(sensitivityInput.value).toFixed(1);
   });
+
+  function formatDuration(sec) {
+    const s = Number(sec) || 0;
+    if (s < 60) return s + "s";
+    const min = Math.floor(s / 60);
+    const rest = s % 60;
+    return rest === 0 ? min + "m" : min + "m " + rest + "s";
+  }
+
+  durationInput.addEventListener("input", () => {
+    durationValueEl.textContent = formatDuration(durationInput.value);
+  });
+  durationValueEl.textContent = formatDuration(durationInput.value);
 
   mapSelect.addEventListener("change", () => {
     buildMap(mapSelect.value);

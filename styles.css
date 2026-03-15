@@ -126,10 +126,16 @@ body {
   vertical-align: middle;
 }
 
+.duration-label,
 .sensitivity-label {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.duration-label #durationValue {
+  font-variant-numeric: tabular-nums;
+  color: #8b949e;
 }
 
 .sensitivity-label #sensitivityValue {
