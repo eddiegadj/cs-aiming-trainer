@@ -174,6 +174,8 @@ import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.m
     setTimeout(() => flashOverlay.classList.remove("flash-hit", "flash-miss"), 80);
   }
 
+  let resultsButtonsCooldownId = null;
+
   function showResults() {
     resultScoreEl.textContent = state.score;
     resultHitsEl.textContent = state.hits;
@@ -190,6 +192,15 @@ import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.m
         : "—";
     resultsOverlay.classList.remove("hidden");
     resultsOverlay.setAttribute("aria-hidden", "false");
+
+    resultsBackBtn.disabled = true;
+    resultsStartAgainBtn.disabled = true;
+    if (resultsButtonsCooldownId) clearTimeout(resultsButtonsCooldownId);
+    resultsButtonsCooldownId = setTimeout(() => {
+      resultsButtonsCooldownId = null;
+      resultsBackBtn.disabled = false;
+      resultsStartAgainBtn.disabled = false;
+    }, 2000);
   }
 
   function goToMain() {

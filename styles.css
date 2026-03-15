@@ -337,6 +337,12 @@ body {
   width: 100%;
 }
 
+.results-overlay .results-stats button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 .cta-secondary {
   background: #21262d;
   color: #e6edf3;
