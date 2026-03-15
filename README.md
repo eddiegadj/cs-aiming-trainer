@@ -27,7 +27,7 @@ Then open the URL (e.g. http://localhost:3000). Don’t open `index.html` as a f
 - **3D scene** (Three.js): look around with the mouse, crosshair fixed at center
 - Red spherical targets that spawn in view
 - Hit/miss flash feedback
-- Stats: score, hits, misses, accuracy %, average reaction time (ms)
+- Stats: score, hits, misses, accuracy %, avg. time to hit (ms/sec)
 - Configurable target size, round duration, sensitivity, invert Y
 
 No build step—vanilla JS with Three.js from CDN.

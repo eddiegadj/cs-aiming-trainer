@@ -28,6 +28,13 @@ import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.m
   const SPAWN_SPREAD = 8;
   const SENSITIVITY_DEG = 0.12;
   const MOVE_SPEED = 18;
+  const EYE_HEIGHT = 1.7;
+  const ROOM_HALF = 24;
+  const ROOM_HEIGHT = 8;
+  const ROOM_SPAWN_MARGIN = 3;
+  const MIN_SPAWN_DISTANCE = 5;
+  const GRAVITY = 20;
+  const JUMP_VELOCITY = 7;
 
   let scene, camera, renderer, rendererCanvas, raycaster, mouseNDC;
   let targetsGroup;
@@ -47,18 +54,19 @@ import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.m
     spawnIntervalId: null,
     yaw: 0,
     pitch: 0,
+    velocityY: 0,
     flashHitUntil: 0,
     flashMissUntil: 0,
   };
 
   function initThree() {
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x161b22);
+    scene.background = new THREE.Color(0x2d333b);
 
     const width = gameContainer.clientWidth;
     const height = gameContainer.clientHeight;
     camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 1000);
-    camera.position.set(0, 0, 0);
+    camera.position.set(0, EYE_HEIGHT, 0);
 
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(width, height);
@@ -66,17 +74,49 @@ import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.m
     rendererCanvas = renderer.domElement;
     gameContainer.insertBefore(rendererCanvas, crosshair);
 
-    const ambient = new THREE.AmbientLight(0x404060, 0.8);
+    const ambient = new THREE.AmbientLight(0xa0a8b8, 1.3);
     scene.add(ambient);
-    const dir = new THREE.DirectionalLight(0xffffff, 0.9);
-    dir.position.set(5, 10, 10);
+    const dir = new THREE.DirectionalLight(0xffffff, 1.4);
+    dir.position.set(8, 14, 10);
     scene.add(dir);
-    const fill = new THREE.DirectionalLight(0xf85149, 0.15);
-    fill.position.set(-5, 0, -10);
+    const fill = new THREE.DirectionalLight(0xe8ecf0, 0.5);
+    fill.position.set(-6, 4, -8);
     scene.add(fill);
 
     targetsGroup = new THREE.Group();
     scene.add(targetsGroup);
+
+    const roomGeo = new THREE.PlaneGeometry(ROOM_HALF * 2, ROOM_HALF * 2);
+    const roomMat = new THREE.MeshStandardMaterial({
+      color: 0x444c56,
+      metalness: 0.05,
+      roughness: 0.9,
+    });
+    const floor = new THREE.Mesh(roomGeo, roomMat);
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.y = 0;
+    floor.receiveShadow = true;
+    scene.add(floor);
+
+    const wallMat = new THREE.MeshStandardMaterial({
+      color: 0x545d68,
+      metalness: 0.05,
+      roughness: 0.9,
+    });
+    const wallHeight = ROOM_HEIGHT;
+    const wallDepth = 0.5;
+    const wallGeoZ = new THREE.BoxGeometry(ROOM_HALF * 2 + wallDepth * 2, wallHeight, wallDepth);
+    const wallGeoX = new THREE.BoxGeometry(wallDepth, wallHeight, ROOM_HALF * 2 + wallDepth * 2);
+    [
+      [0, wallHeight / 2, -ROOM_HALF - wallDepth / 2, wallGeoZ, 0],
+      [0, wallHeight / 2, ROOM_HALF + wallDepth / 2, wallGeoZ, 0],
+      [-ROOM_HALF - wallDepth / 2, wallHeight / 2, 0, wallGeoX, 0],
+      [ROOM_HALF + wallDepth / 2, wallHeight / 2, 0, wallGeoX, 0],
+    ].forEach(([x, y, z, geo]) => {
+      const wall = new THREE.Mesh(geo, wallMat);
+      wall.position.set(x, y, z);
+      scene.add(wall);
+    });
 
     raycaster = new THREE.Raycaster();
     mouseNDC = new THREE.Vector2(0, 0);
@@ -107,14 +147,24 @@ import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.m
 
   function spawnTarget() {
     const radius = getTargetRadius();
-    const forward = getForward();
-    const right = new THREE.Vector3().crossVectors(forward, camera.up).normalize();
-    const up = new THREE.Vector3().crossVectors(right, forward).normalize();
-    const pos = camera.position
-      .clone()
-      .add(forward.clone().multiplyScalar(SPAWN_DISTANCE))
-      .add(right.clone().multiplyScalar((Math.random() - 0.5) * 2 * SPAWN_SPREAD))
-      .add(up.clone().multiplyScalar((Math.random() - 0.5) * 2 * SPAWN_SPREAD));
+    const eyeY = camera.position.y;
+    const heightRange = eyeY * 0.3;
+    const targetY = eyeY + (Math.random() - 0.5) * 2 * heightRange;
+    const minXZ = -ROOM_HALF + ROOM_SPAWN_MARGIN;
+    const maxXZ = ROOM_HALF - ROOM_SPAWN_MARGIN;
+
+    let pos = new THREE.Vector3();
+    for (let tries = 0; tries < 20; tries++) {
+      pos.set(
+        minXZ + Math.random() * (maxXZ - minXZ),
+        targetY,
+        minXZ + Math.random() * (maxXZ - minXZ)
+      );
+      const dx = pos.x - camera.position.x;
+      const dz = pos.z - camera.position.z;
+      if (dx * dx + dz * dz >= MIN_SPAWN_DISTANCE * MIN_SPAWN_DISTANCE) break;
+    }
+    pos.y = targetY;
 
     const geometry = new THREE.SphereGeometry(radius, 24, 24);
     const material = new THREE.MeshStandardMaterial({
@@ -159,6 +209,21 @@ import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.m
       camera.position.x += dx * scale;
       camera.position.z += dz * scale;
     }
+
+    state.velocityY -= GRAVITY * dt;
+    camera.position.y += state.velocityY * dt;
+    if (camera.position.y <= EYE_HEIGHT) {
+      camera.position.y = EYE_HEIGHT;
+      state.velocityY = 0;
+    }
+    const maxY = ROOM_HEIGHT - 0.5;
+    if (camera.position.y > maxY) {
+      camera.position.y = maxY;
+      state.velocityY = 0;
+    }
+
+    camera.position.x = Math.max(-ROOM_HALF, Math.min(ROOM_HALF, camera.position.x));
+    camera.position.z = Math.max(-ROOM_HALF, Math.min(ROOM_HALF, camera.position.z));
   }
 
   function raycastCenter() {
@@ -276,8 +341,9 @@ import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.m
     state.targets = [];
     state.yaw = 0;
     state.pitch = 0;
+    state.velocityY = 0;
     state.roundEndAt = performance.now() + durationSec * 1000;
-    camera.position.set(0, 0, 0);
+    camera.position.set(0, EYE_HEIGHT, 0);
     keys.w = keys.s = keys.a = keys.d = false;
     arena.classList.add("playing");
     overlay.classList.add("hidden");
@@ -315,9 +381,10 @@ import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.m
     state.spawnIntervalId = null;
     state.yaw = 0;
     state.pitch = 0;
+    state.velocityY = 0;
     state.flashHitUntil = 0;
     state.flashMissUntil = 0;
-    camera.position.set(0, 0, 0);
+    camera.position.set(0, EYE_HEIGHT, 0);
     keys.w = keys.s = keys.a = keys.d = false;
     arena.classList.remove("playing");
     overlay.classList.remove("hidden");
@@ -387,6 +454,13 @@ import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.m
     if (k) {
       keys[k] = true;
       if (state.playing) e.preventDefault();
+    }
+    if (e.code === "Space" && state.playing) {
+      const onGround = camera.position.y <= EYE_HEIGHT + 0.05;
+      if (onGround) {
+        state.velocityY = JUMP_VELOCITY;
+        e.preventDefault();
+      }
     }
   });
   document.addEventListener("keyup", (e) => {
