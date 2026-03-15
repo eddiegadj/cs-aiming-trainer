@@ -15,6 +15,7 @@ import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.m
   const resultAccuracyEl = document.getElementById("resultAccuracy");
   const resultReactionEl = document.getElementById("resultReaction");
   const resultsBackBtn = document.getElementById("resultsBackBtn");
+  const resultsStartAgainBtn = document.getElementById("resultsStartAgainBtn");
   const arena = document.querySelector(".arena");
   const startBtn = document.getElementById("startBtn");
   const resetBtn = document.getElementById("resetBtn");
@@ -180,9 +181,12 @@ import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.m
     const total = state.hits + state.misses;
     resultAccuracyEl.textContent =
       total > 0 ? Math.round((state.hits / total) * 100) + "%" : "—";
+    const avgMs = state.reactions.length > 0
+      ? state.reactions.reduce((a, b) => a + b, 0) / state.reactions.length
+      : 0;
     resultReactionEl.textContent =
       state.reactions.length > 0
-        ? (state.reactions.reduce((a, b) => a + b, 0) / state.reactions.length).toFixed(0) + " ms"
+        ? (avgMs >= 1000 ? (avgMs / 1000).toFixed(1) + " sec" : avgMs.toFixed(0) + " ms")
         : "—";
     resultsOverlay.classList.remove("hidden");
     resultsOverlay.setAttribute("aria-hidden", "false");
@@ -213,6 +217,7 @@ import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.m
     const missesEl = document.querySelector('[data-stat="misses"] strong');
     const accEl = document.querySelector('[data-stat="accuracy"] strong');
     const reactEl = document.querySelector('[data-stat="reaction"] strong');
+    if (!scoreEl) return; // main-page stats commented out
 
     scoreEl.textContent = state.score;
     hitsEl.textContent = state.hits;
@@ -227,7 +232,7 @@ import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.m
 
     if (state.reactions.length > 0) {
       const avg = state.reactions.reduce((a, b) => a + b, 0) / state.reactions.length;
-      reactEl.textContent = avg.toFixed(0) + " ms";
+      reactEl.textContent = avg >= 1000 ? (avg / 1000).toFixed(1) + " sec" : avg.toFixed(0) + " ms";
     } else {
       reactEl.textContent = "—";
     }
@@ -385,6 +390,11 @@ import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.m
   startBtn.addEventListener("click", startRound);
   if (resetBtn) resetBtn.addEventListener("click", reset);
   resultsBackBtn.addEventListener("click", goToMain);
+  resultsStartAgainBtn.addEventListener("click", () => {
+    resultsOverlay.classList.add("hidden");
+    resultsOverlay.setAttribute("aria-hidden", "true");
+    startRound();
+  });
 
   initThree();
   rendererCanvas.addEventListener("click", onClick);

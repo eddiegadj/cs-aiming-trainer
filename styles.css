@@ -311,19 +311,20 @@ body {
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1rem;
 }
 
 .results-overlay .results-stats p {
-  margin: 0 0 0.5rem;
+  margin: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
   font-size: 0.9rem;
   color: #8b949e;
-}
-
-.results-overlay .results-stats p:last-child {
-  margin-bottom: 0;
+  width: 100%;
 }
 
 .results-overlay .results-stats strong {
@@ -331,9 +332,24 @@ body {
   font-weight: 600;
 }
 
+.results-overlay .results-stats #resultsStartAgainBtn,
 .results-overlay .results-stats #resultsBackBtn {
   width: 100%;
-  margin-top: 1rem;
+}
+
+.cta-secondary {
+  background: #21262d;
+  color: #e6edf3;
+  border: 1px solid #30363d;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cta-secondary:hover {
+  background: #30363d;
 }
 
 .ui-overlay .header {
