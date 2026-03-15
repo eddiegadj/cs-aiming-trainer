@@ -19,6 +19,7 @@ import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.m
   const arena = document.querySelector(".arena");
   const startBtn = document.getElementById("startBtn");
   const resetBtn = document.getElementById("resetBtn");
+  const mapSelect = document.getElementById("mapSelect");
   const targetSizeSelect = document.getElementById("targetSize");
   const durationInput = document.getElementById("duration");
   const sensitivityInput = document.getElementById("sensitivity");
@@ -35,9 +36,34 @@ import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.m
   const MIN_SPAWN_DISTANCE = 5;
   const GRAVITY = 20;
   const JUMP_VELOCITY = 7;
+  const WALL_MARGIN = 0.5;
+  const WALL_DEPTH = 0.5;
+
+  // Square map: 4 perimeter walls [x, z, width, depth]. Map -24..24.
+  const SQUARE_WALLS = [
+    [ -ROOM_HALF - WALL_DEPTH / 2, -ROOM_HALF, WALL_DEPTH, ROOM_HALF * 2 ],
+    [ ROOM_HALF, -ROOM_HALF, WALL_DEPTH, ROOM_HALF * 2 ],
+    [ -ROOM_HALF, -ROOM_HALF - WALL_DEPTH / 2, ROOM_HALF * 2, WALL_DEPTH ],
+    [ -ROOM_HALF, ROOM_HALF, ROOM_HALF * 2, WALL_DEPTH ],
+  ];
+
+  // WALLS map (de_dust2-style layout): [x, z, width, depth]. Map -24..24.
+  const WALLS_MAP = [
+    [ -ROOM_HALF, -ROOM_HALF, ROOM_HALF * 2, 1 ],
+    [ -ROOM_HALF, ROOM_HALF - 1, ROOM_HALF * 2, 1 ],
+    [ -ROOM_HALF, -ROOM_HALF, 1, ROOM_HALF * 2 ],
+    [ ROOM_HALF - 1, -ROOM_HALF, 1, ROOM_HALF * 2 ],
+    [ 8, -ROOM_HALF, 1, ROOM_HALF * 2 ],
+    [ 8, -8, 16, 1 ],
+    [ -8, -ROOM_HALF, 1, 40 ],
+    [ -ROOM_HALF, 8, 16, 1 ],
+  ];
 
   let scene, camera, renderer, rendererCanvas, raycaster, mouseNDC;
   let targetsGroup;
+  let dust2Walls = [];
+  let floorMesh = null;
+  let wallMeshes = [];
   let animationId = null;
   let clock = new THREE.Clock();
   const keys = { w: false, s: false, a: false, d: false };
@@ -58,6 +84,51 @@ import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.m
     flashHitUntil: 0,
     flashMissUntil: 0,
   };
+
+  function buildMap(mapId) {
+    if (floorMesh) {
+      scene.remove(floorMesh);
+      floorMesh.geometry.dispose();
+      floorMesh.material.dispose();
+      floorMesh = null;
+    }
+    wallMeshes.forEach((mesh) => {
+      scene.remove(mesh);
+      mesh.geometry.dispose();
+      mesh.material.dispose();
+    });
+    wallMeshes = [];
+
+    const roomGeo = new THREE.PlaneGeometry(ROOM_HALF * 2, ROOM_HALF * 2);
+    const roomMat = new THREE.MeshStandardMaterial({
+      color: 0x444c56,
+      metalness: 0.05,
+      roughness: 0.9,
+    });
+    floorMesh = new THREE.Mesh(roomGeo, roomMat);
+    floorMesh.rotation.x = -Math.PI / 2;
+    floorMesh.position.y = 0;
+    floorMesh.receiveShadow = true;
+    scene.add(floorMesh);
+
+    const wallRects = mapId === "walls" ? WALLS_MAP : SQUARE_WALLS;
+    const wallMat = new THREE.MeshStandardMaterial({
+      color: 0x545d68,
+      metalness: 0.05,
+      roughness: 0.9,
+    });
+    const wallHeight = ROOM_HEIGHT;
+    dust2Walls = wallRects.map(([x, z, w, d]) => {
+      const wall = new THREE.Mesh(
+        new THREE.BoxGeometry(w, wallHeight, d),
+        wallMat
+      );
+      wall.position.set(x + w / 2, wallHeight / 2, z + d / 2);
+      scene.add(wall);
+      wallMeshes.push(wall);
+      return { x, z, w, d };
+    });
+  }
 
   function initThree() {
     scene = new THREE.Scene();
@@ -86,37 +157,7 @@ import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.m
     targetsGroup = new THREE.Group();
     scene.add(targetsGroup);
 
-    const roomGeo = new THREE.PlaneGeometry(ROOM_HALF * 2, ROOM_HALF * 2);
-    const roomMat = new THREE.MeshStandardMaterial({
-      color: 0x444c56,
-      metalness: 0.05,
-      roughness: 0.9,
-    });
-    const floor = new THREE.Mesh(roomGeo, roomMat);
-    floor.rotation.x = -Math.PI / 2;
-    floor.position.y = 0;
-    floor.receiveShadow = true;
-    scene.add(floor);
-
-    const wallMat = new THREE.MeshStandardMaterial({
-      color: 0x545d68,
-      metalness: 0.05,
-      roughness: 0.9,
-    });
-    const wallHeight = ROOM_HEIGHT;
-    const wallDepth = 0.5;
-    const wallGeoZ = new THREE.BoxGeometry(ROOM_HALF * 2 + wallDepth * 2, wallHeight, wallDepth);
-    const wallGeoX = new THREE.BoxGeometry(wallDepth, wallHeight, ROOM_HALF * 2 + wallDepth * 2);
-    [
-      [0, wallHeight / 2, -ROOM_HALF - wallDepth / 2, wallGeoZ, 0],
-      [0, wallHeight / 2, ROOM_HALF + wallDepth / 2, wallGeoZ, 0],
-      [-ROOM_HALF - wallDepth / 2, wallHeight / 2, 0, wallGeoX, 0],
-      [ROOM_HALF + wallDepth / 2, wallHeight / 2, 0, wallGeoX, 0],
-    ].forEach(([x, y, z, geo]) => {
-      const wall = new THREE.Mesh(geo, wallMat);
-      wall.position.set(x, y, z);
-      scene.add(wall);
-    });
+    buildMap(mapSelect.value);
 
     raycaster = new THREE.Raycaster();
     mouseNDC = new THREE.Vector2(0, 0);
@@ -154,12 +195,13 @@ import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.m
     const maxXZ = ROOM_HALF - ROOM_SPAWN_MARGIN;
 
     let pos = new THREE.Vector3();
-    for (let tries = 0; tries < 20; tries++) {
+    for (let tries = 0; tries < 40; tries++) {
       pos.set(
         minXZ + Math.random() * (maxXZ - minXZ),
         targetY,
         minXZ + Math.random() * (maxXZ - minXZ)
       );
+      if (pointInWall(pos.x, pos.z)) continue;
       const dx = pos.x - camera.position.x;
       const dz = pos.z - camera.position.z;
       if (dx * dx + dz * dz >= MIN_SPAWN_DISTANCE * MIN_SPAWN_DISTANCE) break;
@@ -224,6 +266,33 @@ import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.m
 
     camera.position.x = Math.max(-ROOM_HALF, Math.min(ROOM_HALF, camera.position.x));
     camera.position.z = Math.max(-ROOM_HALF, Math.min(ROOM_HALF, camera.position.z));
+
+    for (let iter = 0; iter < 3; iter++) {
+      for (const wall of dust2Walls) {
+        const { x, z, w, d } = wall;
+        const left = x - WALL_MARGIN, right = x + w + WALL_MARGIN;
+        const bottom = z - WALL_MARGIN, top = z + d + WALL_MARGIN;
+        const px = camera.position.x, pz = camera.position.z;
+        if (px >= left && px <= right && pz >= bottom && pz <= top) {
+          const dl = px - left, dr = right - px, db = pz - bottom, dt = top - pz;
+          const minD = Math.min(dl, dr, db, dt);
+          if (minD === dl) camera.position.x = left;
+          else if (minD === dr) camera.position.x = right;
+          else if (minD === db) camera.position.z = bottom;
+          else camera.position.z = top;
+        }
+      }
+    }
+  }
+
+  function pointInWall(x, z) {
+    for (const wall of dust2Walls) {
+      const { x: wx, z: wz, w, d } = wall;
+      const left = wx - WALL_MARGIN, right = wx + w + WALL_MARGIN;
+      const bottom = wz - WALL_MARGIN, top = wz + d + WALL_MARGIN;
+      if (x >= left && x <= right && z >= bottom && z <= top) return true;
+    }
+    return false;
   }
 
   function raycastCenter() {
@@ -470,6 +539,22 @@ import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.m
 
   sensitivityInput.addEventListener("input", () => {
     sensitivityValueEl.textContent = Number(sensitivityInput.value).toFixed(1);
+  });
+
+  mapSelect.addEventListener("change", () => {
+    buildMap(mapSelect.value);
+  });
+
+  document.querySelectorAll(".target-size-tab").forEach((tab) => {
+    tab.addEventListener("click", () => {
+      const value = tab.getAttribute("data-value");
+      if (!value) return;
+      targetSizeSelect.value = value;
+      document.querySelectorAll(".target-size-tab").forEach((t) => {
+        t.classList.toggle("active", t === tab);
+        t.setAttribute("aria-selected", t === tab ? "true" : "false");
+      });
+    });
   });
 
   startBtn.addEventListener("click", startRound);

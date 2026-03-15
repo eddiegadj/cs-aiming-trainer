@@ -69,6 +69,7 @@ body {
 
 .controls select,
 .controls input[type="number"] {
+  width: 6.8rem;
   background: #21262d;
   border: 1px solid #30363d;
   color: #e6edf3;
@@ -77,17 +78,61 @@ body {
   font: inherit;
 }
 
-.controls input[type="number"] {
-  width: 3.5rem;
+.target-size-label {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.target-size-tabs {
+  display: flex;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid #30363d;
+  background: #21262d;
+}
+
+.target-size-tab {
+  flex: 1;
+  min-width: 2.25rem;
+  padding: 0.35rem 0.6rem;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #8b949e;
+  background: transparent;
+  border: none;
+  border-right: 1px solid #30363d;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+
+.target-size-tab:last-child {
+  border-right: none;
+}
+
+.target-size-tab:hover {
+  color: #e6edf3;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.target-size-tab.active {
+  color: #e6edf3;
+  background: #30363d;
 }
 
 .controls input[type="range"] {
-  width: 80px;
+  width: 6.8rem;
   vertical-align: middle;
 }
 
+.sensitivity-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .sensitivity-label #sensitivityValue {
-  min-width: 2rem;
   font-variant-numeric: tabular-nums;
   color: #8b949e;
 }
