@@ -1,0 +1,427 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "JetBrains Mono", "Fira Code", "Consolas", monospace;
+  background: #0d1117 url("assets/counter-strike-global-offensive-desktop-mbn96co5vwfz86cm.webp") center / cover no-repeat;
+  color: #e6edf3;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* Header */
+.header {
+  padding: 0.75rem 1.5rem;
+  background: #161b22;
+  border-bottom: 1px solid #30363d;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.stats {
+  display: flex;
+  gap: 1.25rem;
+  margin-left: auto;
+}
+
+.stat strong {
+  color: #7ee787;
+  font-weight: 600;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.controls label {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: #8b949e;
+}
+
+.controls label span {
+  white-space: nowrap;
+}
+
+.controls select,
+.controls input[type="number"] {
+  background: #21262d;
+  border: 1px solid #30363d;
+  color: #e6edf3;
+  padding: 0.35rem 0.5rem;
+  border-radius: 4px;
+  font: inherit;
+}
+
+.controls input[type="number"] {
+  width: 3.5rem;
+}
+
+.controls input[type="range"] {
+  width: 80px;
+  vertical-align: middle;
+}
+
+.sensitivity-label #sensitivityValue {
+  min-width: 2rem;
+  font-variant-numeric: tabular-nums;
+  color: #8b949e;
+}
+
+.invert-label {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.invert-label input[type="checkbox"] {
+  accent-color: #58a6ff;
+}
+
+.control-comment {
+  font-size: 0.75rem;
+  color: #8b949e;
+  font-style: italic;
+  font-weight: normal;
+}
+
+.cta-primary,
+#startBtn {
+  width: 100%;
+  background: #238636;
+  color: #fff;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cta-primary:hover,
+#startBtn:hover {
+  background: #2ea043;
+}
+
+#resetBtn {
+  width: 100%;
+  background: #21262d;
+  color: #e6edf3;
+  border: 1px solid #30363d;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font: inherit;
+  cursor: pointer;
+}
+
+#resetBtn:hover {
+  background: #30363d;
+}
+
+/* Arena — fills viewport; canvas gets full space when overlay is hidden */
+.arena {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  position: relative;
+  background: #0d1117;
+}
+
+.canvas-wrap {
+  position: absolute;
+  inset: 0;
+  min-width: 320px;
+}
+
+.canvas-wrap canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  cursor: none;
+  background: #161b22;
+}
+
+.arena:not(.playing) .canvas-wrap canvas {
+  cursor: default;
+}
+
+.flash-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  border-radius: 8px;
+  opacity: 0;
+  transition: opacity 0.05s ease-out;
+}
+
+.flash-overlay.flash-hit {
+  opacity: 1;
+  background: radial-gradient(circle at center, rgba(126, 231, 135, 0.4) 0%, transparent 70%);
+}
+
+.flash-overlay.flash-miss {
+  opacity: 1;
+  background: radial-gradient(circle at center, rgba(248, 81, 73, 0.25) 0%, transparent 70%);
+}
+
+.countdown {
+  position: absolute;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #e6edf3;
+  text-shadow: 0 0 8px rgba(0, 0, 0, 0.9), 0 1px 2px rgba(0, 0, 0, 0.8);
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.countdown.visible {
+  opacity: 1;
+}
+
+/* Crosshair — fixed at center of canvas (shooter-style) */
+.crosshair {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.arena.playing .crosshair {
+  opacity: 1;
+}
+
+.crosshair::before,
+.crosshair::after {
+  content: "";
+  position: absolute;
+  background: #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.8);
+}
+
+.crosshair::before {
+  width: 2px;
+  height: 20px;
+  left: 9px;
+  top: 0;
+}
+
+.crosshair::after {
+  width: 20px;
+  height: 2px;
+  left: 0;
+  top: 9px;
+}
+
+/* UI overlay — shown before round; disappears during play for full viewport */
+.ui-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: url("assets/counter-strike-global-offensive-desktop-mbn96co5vwfz86cm.webp") center / cover no-repeat;
+  z-index: 10;
+  padding: 1.5rem;
+  overflow: auto;
+}
+
+.ui-overlay.hidden {
+  display: none;
+}
+
+.results-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: url("assets/counter-strike-global-offensive-desktop-mbn96co5vwfz86cm.webp") center / cover no-repeat;
+  z-index: 15;
+  padding: 1.5rem;
+}
+
+.results-overlay.hidden {
+  display: none;
+}
+
+.results-overlay-content {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+  max-width: 320px;
+  width: 100%;
+}
+
+.results-overlay .results-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.results-overlay .results-stats {
+  width: 100%;
+  padding: 1rem;
+  background: rgba(22, 27, 34, 0.75);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 8px;
+}
+
+.results-overlay .results-stats p {
+  margin: 0 0 0.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
+  color: #8b949e;
+}
+
+.results-overlay .results-stats p:last-child {
+  margin-bottom: 0;
+}
+
+.results-overlay .results-stats strong {
+  color: #7ee787;
+  font-weight: 600;
+}
+
+.results-overlay .results-stats #resultsBackBtn {
+  width: 100%;
+  margin-top: 1rem;
+}
+
+.ui-overlay .header {
+  width: 100%;
+  max-width: 320px;
+  max-height: calc(100vh - 3rem);
+  overflow-y: auto;
+  border-bottom: none;
+  padding: 1.375rem 1rem;
+  background: rgba(22, 27, 34, 0.75);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.ui-overlay .header .header-sub {
+  margin: 0.25rem 0 0;
+  font-size: 0.75rem;
+  color: #8b949e;
+  line-height: 1.4;
+  text-align: left;
+}
+
+.ui-overlay .header .header-divider {
+  width: 100%;
+  margin: 0.75rem 0 0;
+  border: none;
+  border-top: 1px solid #30363d;
+}
+
+
+.ui-overlay .stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  margin-left: 0;
+}
+
+.ui-overlay .controls {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.ui-overlay .controls label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.ui-overlay .controls .control-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ui-overlay .controls .controls-caption {
+  width: 100%;
+  margin: 0.5rem 0 0;
+  font-size: 0.6875rem;
+  color: #8b949e;
+  text-align: center;
+}
+
+.ui-overlay .overlay-message {
+  text-align: left;
+  color: #8b949e;
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+.ui-overlay .footer {
+  padding: 0.5rem 0;
+  border-top: none;
+}
+
+.ui-overlay .footer p,
+.ui-overlay .footer .footer-sub {
+  margin: 0;
+  font-size: 0.75rem;
+  color: #8b949e;
+  line-height: 1.4;
+}
